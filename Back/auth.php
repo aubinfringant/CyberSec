@@ -48,8 +48,8 @@ function checkRateLimit(PDO $pdo): bool {
 
     if ($data) {
         $elapsed = time() - strtotime($data['last_try']);
-        if ($elapsed < 600 && $data['attempts'] >= 5) return false; // bloqué
-        if ($elapsed >= 600) {
+        if ($elapsed < 60 && $data['attempts'] >= 5) return false; // bloqué
+        if ($elapsed >= 60) {
             // Reset après 10 min
             $pdo->prepare("UPDATE rate_limit SET attempts=1, last_try=CURRENT_TIMESTAMP WHERE ip=?")
                 ->execute([$ip]);
@@ -119,7 +119,7 @@ if ($action === 'register') {
 // ─── CONNEXION ───────────────────────────────────────────────────
 elseif ($action === 'login') {
     if (!checkRateLimit($pdo))
-        exit(json_encode(['error' => 'Trop de tentatives. Réessayez dans 10 min.']));
+        exit(json_encode(['error' => 'Trop de tentatives. Réessayez dans 1 min.']));
 
     $username = trim($body['username'] ?? '');
     $password = $body['password'] ?? '';
@@ -182,4 +182,3 @@ else {
     http_response_code(400);
     echo json_encode(['error' => 'Action inconnue']);
 }
-

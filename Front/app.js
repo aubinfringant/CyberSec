@@ -91,6 +91,26 @@ async function checkAuth() {
   }
 }
 
+async function sendContact() {
+  const csrfRes = await fetch('http://localhost:8001/csrf.php');
+  const csrfData = await csrfRes.json();
+
+  const res = await fetch('http://localhost:8001/contact.php', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({
+      name: document.getElementById('c-name').value,
+      email: document.getElementById('c-email').value,
+      message: document.getElementById('c-message').value,
+      csrf_token: csrfData.csrf_token
+    })
+  });
+
+  const json = await res.json();
+  alert(json.success || json.error);
+}
+
 // ─── Connexion ───────────────────────────────────────────────────
 document.getElementById('btn-login').addEventListener('click', () => {
   const username = document.getElementById('login-user').value.trim();
