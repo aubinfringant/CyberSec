@@ -99,6 +99,14 @@ small { display: block; font-size: 12px; color: #6b7280; margin-top: 4px; }
 .btn:hover { background: #4338ca; }
 .btn:disabled { opacity: .6; cursor: not-allowed; }
 
+#btn-logout {
+  background: #dc2626;
+}
+
+#btn-logout:hover {
+  background: #b91c1c;
+}
+
 /* Messages */
 .msg {
   margin-top: 12px; font-size: 14px;

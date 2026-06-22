@@ -24,17 +24,15 @@ const label = document.getElementById('strength-label');
 document.getElementById('reg-pass').addEventListener('input', e => {
   const val = e.target.value;
   let score = 0;
-  if (val.length >= 8)  score++;
   if (val.length >= 12) score++;
   if (/[A-Z]/.test(val)) score++;
   if (/[0-9]/.test(val)) score++;
   if (/[^A-Za-z0-9]/.test(val)) score++;
 
   const levels = [
-    { w: '20%', bg: '#ef4444', text: 'Très faible' },
-    { w: '40%', bg: '#f97316', text: 'Assez Faible' },
-    { w: '60%', bg: '#eab308', text: 'Faible' },
-    { w: '80%', bg: 'rgb(197, 181, 34)', text: 'Moyen' },
+    { w: '25%', bg: '#ef4444', text: 'Très faible' },
+    { w: '50%', bg: '#f97316', text: 'Assez Faible' },
+    { w: '75%', bg: 'rgb(197, 181, 34)', text: 'Faible' },
     { w: '100%', bg: '#16a34a', text: 'Fort' },
   ];
   const lvl = levels[Math.min(score - 1, 4)] ?? levels[0];
@@ -58,11 +56,12 @@ async function callAPI(action, data, msgEl, btnEl) {
     });
     const json = await res.json();
 
-    if (json.success) {
+    if (json.success && action === 'login') {
       msgEl.className = 'msg success';
       msgEl.textContent = typeof json.success === 'string'
         ? json.success
         : `Bienvenue, ${json.username} !`;
+        checkAuth();
     } else {
       msgEl.className = 'msg error';
       msgEl.textContent = json.error ?? 'Erreur inconnue';
@@ -72,6 +71,23 @@ async function callAPI(action, data, msgEl, btnEl) {
     msgEl.textContent = 'Impossible de contacter le serveur.';
   } finally {
     btnEl.disabled = false;
+  }
+}
+
+async function checkAuth() {
+  const res = await fetch('http://localhost:8001/auth.php', {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'me' })
+  });
+
+  const json = await res.json();
+
+  if (json.logged) {
+    document.getElementById('btn-logout').style.display = 'block';
+  } else {
+    document.getElementById('btn-logout').style.display = 'none';
   }
 }
 
@@ -144,6 +160,8 @@ function enableAuth() {
       el.className = 'msg';
     }
   });
+  document.getElementById('login-msg').className = 'msg error';
+  document.getElementById('login-msg').textContent ='';
 }
 
 function disableAuth() {
@@ -154,11 +172,16 @@ function disableAuth() {
   document.getElementById('login-msg').textContent =
     'Cookies refusés. Cliquez sur "Modifier mon choix" pour changer d\'avis.';
 }
+disableAuth();
 
 // Au chargement : applique le choix déjà enregistré
 if (localStorage.getItem('cookie_choice') === 'refused') {
   disableAuth();
+  document.addEventListener('DOMContentLoaded', () => {
+  checkAuth();
+});
 }
+
 // Réouvrir les paramètres cookies
 document.getElementById('cookie-settings').addEventListener('click', () => {
   banner.classList.remove('hidden');
@@ -169,9 +192,28 @@ const cookieChoice = localStorage.getItem('cookie_choice');
 
 if (cookieChoice === 'accepted') {
   banner.classList.add('hidden');
+  document.getElementById('login-msg').textContent ="";
   enableAuth();
 }
 else if (cookieChoice === 'refused') {
   banner.classList.add('hidden');
   disableAuth();
 }
+
+document.getElementById('btn-logout').addEventListener('click', async () => {
+  await fetch('http://localhost:8001/auth.php', {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'logout' })
+  });
+
+  document.getElementById('btn-logout').style.display = 'none';
+
+  document.getElementById('login-msg').textContent = '';
+  document.getElementById('reg-msg').textContent = '';
+
+  localStorage.removeItem('cookie_choice');
+
+  enableAuth();
+});

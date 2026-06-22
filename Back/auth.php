@@ -1,4 +1,12 @@
 <?php
+session_set_cookie_params([
+    'lifetime' => 0,
+    'path' => '/',
+    'secure' => true,
+    'httponly' => true,
+    'samesite' => 'Strict'
+]);
+
 session_start();
 
 // En-têtes de sécurité
@@ -55,15 +63,15 @@ function checkRateLimit(PDO $pdo): bool {
     return true;
 }
 
-// ─── Générer un token JWT simple (sans librairie externe) ────────
+// ─── Générer un token JWT simple ────────────────────────────────
 function generateToken(int $userId, string $username): string {
-    $secret = 'CHANGE_ME_32_CHARS_MINIMUM_SECRET'; // → mettez en variable d'env
+    $secret = 'CHANGE_ME_32_CHARS_MINIMUM_SECRET';
     $header  = base64_encode(json_encode(['alg'=>'HS256','typ'=>'JWT']));
     $payload = base64_encode(json_encode([
         'sub' => $userId,
         'usr' => $username,
         'iat' => time(),
-        'exp' => time() + 3600  // 1h
+        'exp' => time() + 3600
     ]));
     $sig = hash_hmac('sha256', "$header.$payload", $secret, true);
     return "$header.$payload." . base64_encode($sig);
@@ -76,11 +84,13 @@ if ($action === 'register') {
     $username = trim($body['username'] ?? '');
     $password = $body['password'] ?? '';
 
-    // Validation
+    // Validation user
     if (strlen($username) < 3 || strlen($username) > 30)
         exit(json_encode(['error' => 'Pseudo : 3 à 30 caractères']));
     if (!preg_match('/^[a-zA-Z0-9_]+$/', $username))  
         exit(json_encode(['error' => 'Pseudo : lettres (minuscule, majuscule), chiffres et _ uniquement']));
+    
+    // Validation MDP
     if (strlen($password) < 12)
         exit(json_encode(['error' => 'Mot de passe : 12 caractères minimum']));
     if (!preg_match('/[A-Z]/', $password))
@@ -139,17 +149,37 @@ elseif ($action === 'login') {
         'secure' => true, 
     ]);
 
+    $ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+    $pdo->prepare("UPDATE rate_limit SET attempts=1, last_try=CURRENT_TIMESTAMP WHERE ip=?")->execute([$ip]);
+
     echo json_encode(['success' => true, 'username' => $username]);
 }
 
 // ─── DÉCONNEXION ─────────────────────────────────────────────────
 elseif ($action === 'logout') {
-    setcookie('auth_token', '', time() - 3600, '/');
+    setcookie('auth_token', '', [
+    'expires' => time() - 3600,
+    'path' => '/',
+    'httponly' => true,
+    'secure' => true,
+    'samesite' => 'Strict'
+    ]);
     session_destroy();
     echo json_encode(['success' => 'Déconnecté']);
+}
+
+elseif ($action === 'me') {
+
+    if (!isset($_COOKIE['auth_token'])) {
+        echo json_encode(['logged' => false]);
+        exit;
+    }
+
+    echo json_encode(['logged' => true]);
 }
 
 else {
     http_response_code(400);
     echo json_encode(['error' => 'Action inconnue']);
 }
+
