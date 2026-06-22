@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Authentification sécurisée</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main>
+    <div class="card" id="app">
+      <!-- Les onglets -->
+      <div class="tabs" role="tablist">
+        <button class="tab active" data-tab="login"
+          role="tab" aria-selected="true">Connexion</button>
+        <button class="tab" data-tab="register"
+          role="tab" aria-selected="false">Inscription</button>
+      </div>
+
+      <!-- Formulaire connexion -->
+      <section id="login" class="panel active" aria-label="Connexion">
+        <h1>Connexion</h1>
+        <div class="field">
+          <label for="login-user">Pseudo</label>
+          <input type="text" id="login-user" autocomplete="username"
+                 minlength="3" maxlength="30" required>
+        </div>
+        <div class="field">
+          <label for="login-pass">Mot de passe</label>
+          <div class="input-wrap">
+            <input type="password" id="login-pass" autocomplete="current-password"
+                   minlength="8" required>
+            <button type="button" class="toggle-pass" aria-label="Afficher/masquer">👁</button>
+          </div>
+        </div>
+        <button class="btn" id="btn-login">Se connecter</button>
+        <p class="msg" id="login-msg" role="alert" aria-live="polite"></p>
+      </section>
+
+      <!-- Formulaire inscription -->
+      <section id="register" class="panel" aria-label="Inscription">
+        <h1>Inscription</h1>
+        <div class="field">
+          <label for="reg-user">Pseudo</label>
+          <input type="text" id="reg-user" autocomplete="username"
+                 minlength="3" maxlength="30" pattern="[a-zA-Z0-9_]+" required>
+          <small>Lettres, chiffres et _ (3–30 caractères)</small>
+        </div>
+        <div class="field">
+          <label for="reg-pass">Mot de passe</label>
+          <input type="password" id="reg-pass" autocomplete="new-password"
+                 minlength="8" required>
+          <div class="strength-bar"><div id="strength-fill"></div></div>
+          <small id="strength-label">—</small>
+        </div>
+        <div class="field">
+          <label for="reg-pass2">Confirmer</label>
+          <input type="password" id="reg-pass2" autocomplete="new-password"
+                 minlength="8" required>
+        </div>
+        <button class="btn" id="btn-register">Créer le compte</button>
+        <p class="msg" id="reg-msg" role="alert" aria-live="polite"></p>
+      </section>
+    </div>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>
