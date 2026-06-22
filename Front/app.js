@@ -32,15 +32,15 @@ document.getElementById('reg-pass').addEventListener('input', e => {
 
   const levels = [
     { w: '20%', bg: '#ef4444', text: 'Très faible' },
-    { w: '40%', bg: '#f97316', text: 'Faible' },
-    { w: '60%', bg: '#eab308', text: 'Moyen' },
-    { w: '80%', bg: '#22c55e', text: 'Fort' },
-    { w: '100%', bg: '#16a34a', text: 'Très fort' },
+    { w: '40%', bg: '#f97316', text: 'Assez Faible' },
+    { w: '60%', bg: '#eab308', text: 'Faible' },
+    { w: '80%', bg: 'rgb(197, 181, 34)', text: 'Moyen' },
+    { w: '100%', bg: '#16a34a', text: 'Fort' },
   ];
   const lvl = levels[Math.min(score - 1, 4)] ?? levels[0];
   fill.style.width = val ? lvl.w : '0';
   fill.style.background = lvl.bg;
-  label.textContent = val ? lvl.text : '—';
+  label.textContent = val ? lvl.text : 'Minimum 12 caractères avec une majuscule, une minuscule,un chiffre et un caractère spécial';
 });
 
 // ─── Appel API générique ─────────────────────────────────────────
@@ -110,11 +110,68 @@ document.getElementById('btn-register').addEventListener('click', () => {
     msg.textContent = 'Les mots de passe ne correspondent pas.';
     return;
   }
-  if (password.length < 8) {
+  if (password.length < 12) {
     msg.className = 'msg error';
-    msg.textContent = 'Mot de passe trop court (8 min).';
+    msg.textContent = 'Mot de passe trop court (12 min).';
     return;
   }
 
   callAPI('register', { username, password }, msg, btn);
 });
+// ── Bandeau cookie ────────────────────────────────────────────────
+const banner = document.getElementById('cookie-banner');
+
+document.getElementById('cookie-accept').addEventListener('click', () => {
+  localStorage.setItem('cookie_choice', 'accepted');
+  banner.classList.add('hidden');
+  enableAuth();
+});
+
+document.getElementById('cookie-refuse').addEventListener('click', () => {
+  localStorage.setItem('cookie_choice', 'refused');
+  banner.classList.add('hidden');
+  disableAuth();
+});
+
+function enableAuth() {
+  ['btn-login', 'btn-register'].forEach(id => {
+    document.getElementById(id).disabled = false;
+  });
+  ['login-msg', 'reg-msg'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el.textContent.includes('cookie')) {
+      el.textContent = '';
+      el.className = 'msg';
+    }
+  });
+}
+
+function disableAuth() {
+  ['btn-login', 'btn-register'].forEach(id => {
+    document.getElementById(id).disabled = true;
+  });
+  document.getElementById('login-msg').className = 'msg error';
+  document.getElementById('login-msg').textContent =
+    'Cookies refusés. Cliquez sur "Modifier mon choix" pour changer d\'avis.';
+}
+
+// Au chargement : applique le choix déjà enregistré
+if (localStorage.getItem('cookie_choice') === 'refused') {
+  disableAuth();
+}
+// Réouvrir les paramètres cookies
+document.getElementById('cookie-settings').addEventListener('click', () => {
+  banner.classList.remove('hidden');
+  banner.style.display = 'flex';
+});
+
+const cookieChoice = localStorage.getItem('cookie_choice');
+
+if (cookieChoice === 'accepted') {
+  banner.classList.add('hidden');
+  enableAuth();
+}
+else if (cookieChoice === 'refused') {
+  banner.classList.add('hidden');
+  disableAuth();
+}

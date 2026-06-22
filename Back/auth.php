@@ -81,15 +81,23 @@ if ($action === 'register') {
         exit(json_encode(['error' => 'Pseudo : 3 à 30 caractères']));
     if (!preg_match('/^[a-zA-Z0-9_]+$/', $username))  
         exit(json_encode(['error' => 'Pseudo : lettres (minuscule, majuscule), chiffres et _ uniquement']));
-    if (strlen($password) <= 12)
+    if (strlen($password) < 12)
         exit(json_encode(['error' => 'Mot de passe : 12 caractères minimum']));
+    if (!preg_match('/[A-Z]/', $password))
+        exit(json_encode(['error' => 'Mot de passe : au moins une majuscule']));
+    if (!preg_match('/[a-z]/', $password))
+        exit(json_encode(['error' => 'Mot de passe : au moins une minuscule']));
+    if (!preg_match('/[0-9]/', $password))
+        exit(json_encode(['error' => 'Mot de passe : au moins un chiffre']));
+    if (!preg_match('/[^A-Za-z0-9]/', $password))
+        exit(json_encode(['error' => 'Mot de passe : au moins un caractère spécial']));
 
     // Vérifie si le pseudo existe
     $stmt = $pdo->prepare('SELECT id FROM users WHERE username = ?');
     $stmt->execute([$username]);
     if ($stmt->fetch()) exit(json_encode(['error' => 'Pseudo déjà pris']));
 
-    // Hachage bcrypt (coût 12 par défaut)
+    // Hachage bcrypt
     $hash = password_hash($password, PASSWORD_BCRYPT);
 
     $ins = $pdo->prepare('INSERT INTO users (username, password) VALUES (?, ?)');
@@ -128,7 +136,7 @@ elseif ($action === 'login') {
         'path'     => '/',
         'httponly' => true,
         'samesite' => 'Strict',
-        // 'secure' => true,  // ← décommentez en HTTPS
+        'secure' => true, 
     ]);
 
     echo json_encode(['success' => true, 'username' => $username]);
