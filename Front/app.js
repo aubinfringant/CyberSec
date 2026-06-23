@@ -95,11 +95,12 @@ async function sendContact() {
   const csrfRes = await fetch('http://localhost:8001/csrf.php');
   const csrfData = await csrfRes.json();
 
-  const res = await fetch('http://localhost:8001/contact.php', {
+  const res = await fetch('http://localhost:8001/auth.php', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
     body: JSON.stringify({
+      action: 'message',
       name: document.getElementById('c-name').value,
       email: document.getElementById('c-email').value,
       message: document.getElementById('c-message').value,
@@ -229,10 +230,8 @@ document.getElementById('btn-logout').addEventListener('click', async () => {
   });
 
   document.getElementById('btn-logout').style.display = 'none';
-
   document.getElementById('login-msg').textContent = '';
   document.getElementById('reg-msg').textContent = '';
-
   localStorage.removeItem('cookie_choice');
 
   enableAuth();
