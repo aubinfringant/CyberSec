@@ -1,6 +1,19 @@
 <?php
-session_start();
+session_start(); // Démarre ou reprend la session PHP
+
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
+// Si le champ 'website' est rempli, c'est qu'un robot l'a soumis automatiquement.
+$honeypot = $body['website'] ?? '';
+if (!empty($honeypot)) {
+    // On feint le succès pour que le robot pense avoir réussi, mais on stoppe tout.
+    exit(json_encode(['success' => 'Message envoyé'])); 
+}
+
 header('Content-Type: application/json');
+
 
 require_once 'db.php';
 

@@ -6,132 +6,219 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Authentification sécurisée</title>
   <link rel="stylesheet" href="style.css">
-  <!-- hCaptcha : chargé en async pour ne pas bloquer le rendu -->
-  <script src="https://js.hcaptcha.com/1/api.js" async defer></script>
 </head>
 
 <body>
   <main>
     <div class="card" id="app">
+
       <!-- Onglets -->
       <div class="tabs" role="tablist">
-        <button class="tab active" data-tab="login"
-          role="tab" aria-selected="true">Connexion</button>
-        <button class="tab" data-tab="register"
-          role="tab" aria-selected="false">Inscription</button>
-        <button class="tab" data-tab="contact"
-          role="tab" aria-selected="false">Contact</button>
+        <button class="tab active" data-tab="login" role="tab" aria-selected="true" type="button">
+          Connexion
+        </button>
+
+        <button class="tab" data-tab="register" role="tab" aria-selected="false" type="button">
+          Inscription
+        </button>
+
+        <button class="tab" data-tab="contact" role="tab" aria-selected="false" type="button">
+          Contact
+        </button>
       </div>
 
-      <!-- Formulaire connexion -->
+      <!-- CONNEXION -->
+
       <section id="login" class="panel active" aria-label="Connexion">
         <h1>Connexion</h1>
-        <div class="field">
-          <label for="login-user">Pseudo</label>
-          <input type="text" id="login-user" autocomplete="username"
-                 minlength="3" maxlength="30" required>
-        </div>
-        <div class="field">
-          <label for="login-pass">Mot de passe</label>
-          <div class="input-wrap">
-            <input type="password" id="login-pass" autocomplete="current-password"
-                   minlength="12" required>
-            <button type="button" class="toggle-pass" aria-label="Afficher/masquer">👁</button>
+
+        <form id="login-form" method="post" autocomplete="on">
+
+          <div class="field">
+            <label for="login-user">Pseudo
+              <span aria-hidden="true">*</span>
+            </label>
+            <input type="text" id="login-user" name="username"
+              autocomplete="username" minlength="3" maxlength="30" required>
           </div>
-        </div>
-        <button class="btn" id="btn-login">Se connecter</button>
+
+          <div class="field">
+            <label for="login-pass">Mot de passe
+              <span aria-hidden="true">*</span>
+            </label>
+
+            <div class="input-wrap">
+              <input type="password" id="login-pass" name="password"
+                autocomplete="current-password" minlength="12" required>
+
+              <button type="button" class="toggle-pass"
+                aria-label="Afficher/masquer">👁
+              </button>
+            </div>
+          </div>
+
+          <button class="btn" id="btn-login" type="submit">
+            Se connecter
+          </button>
+
+        </form>
+
         <p class="msg" id="login-msg" role="alert" aria-live="polite"></p>
+
       </section>
 
-      <!-- Formulaire inscription -->
+      <!-- INSCRIPTION -->
+
       <section id="register" class="panel" aria-label="Inscription">
+
         <h1>Inscription</h1>
-        <div class="field">
-          <label for="reg-user">Pseudo</label>
-          <input type="text" id="reg-user" autocomplete="username"
-                 minlength="3" maxlength="30" pattern="[a-zA-Z0-9_]+" required>
-          <small>Lettres, chiffres et _ (3–30 caractères)</small>
-        </div>
-        <div class="field">
-          <label for="reg-pass">Mot de passe</label>
-          <input type="password" id="reg-pass" autocomplete="new-password" minlength="12" required>
-          <div class="strength-bar"><div id="strength-fill"></div></div>
-          <small id="strength-label">Minimum 12 caractères avec une majuscule, une minuscule, un chiffre et un caractère spécial</small>
-        </div>
-        <div class="field">
-          <label for="reg-pass2">Confirmer</label>
-          <input type="password" id="reg-pass2" autocomplete="new-password" minlength="12" required>
-        </div>
-        <button class="btn" id="btn-register">Créer le compte</button>
+        
+
+        <form id="register-form" method="post" autocomplete="on">
+
+          <div class="field">
+
+            <label for="reg-user">Pseudo
+              <span aria-hidden="true">*</span>
+            </label>
+
+            <input type="text" id="reg-user" name="username"
+              autocomplete="username" minlength="3" maxlength="30"
+              pattern="[a-zA-Z0-9_]+" required>
+
+            <small>Lettres, chiffres et _ (3–30 caractères)</small>
+
+          </div>
+
+          <div class="field">
+
+            <label for="reg-pass">Mot de passe
+              <span aria-hidden="true">*</span>
+            </label>
+
+            <input type="password" id="reg-pass" name="password"
+              autocomplete="new-password" minlength="12" required>
+
+            <div class="strength-bar">
+              <div id="strength-fill"></div>
+            </div>
+
+            <small id="strength-label">
+              Minimum 12 caractères avec une majuscule, une minuscule, un chiffre et un caractère spécial
+            </small>
+
+          </div>
+
+          <div class="field">
+
+            <label for="reg-pass2">Confirmer
+              <span aria-hidden="true">*</span>
+            </label>
+
+            <input type="password" id="reg-pass2" name="password_confirm"
+              autocomplete="new-password" minlength="12" required>
+
+          </div>
+
+          <button class="btn" id="btn-register" type="submit">
+            Créer le compte
+          </button>
+
+        </form>
+
         <p class="msg" id="reg-msg" role="alert" aria-live="polite"></p>
+
       </section>
 
-      <!-- ─── Formulaire contact sécurisé ───────────────────────── -->
-      <!--
-        Mesures de sécurité intégrées :
-        1. CSRF  : token récupéré via /csrf.php et envoyé dans le corps JSON.
-                   Le serveur le compare via hash_equals() et le régénère après usage.
-        2. XSS   : les champs sont échappés côté serveur avec htmlspecialchars().
-                   Le JS ne construit pas de HTML à partir des entrées utilisateur.
-        3. Anti-spam : hCaptcha invisible — la réponse est vérifiée côté serveur
-                   via l'API https://hcaptcha.com/siteverify avant tout traitement.
-        4. Validation : longueurs et format contrôlés côté client ET serveur.
-      -->
+      <!-- ===================== CONTACT ===================== -->
+
       <section id="contact" class="panel" aria-label="Contact">
+
         <h1>Nous contacter</h1>
-        <div class="field">
-          <label for="c-name">Nom <span aria-hidden="true">*</span></label>
-          <input type="text" id="c-name" autocomplete="name"
-                 minlength="2" maxlength="50"
-                 placeholder="Votre nom" required>
-        </div>
-        <div class="field">
-          <label for="c-email">Email <span aria-hidden="true">*</span></label>
-          <input type="email" id="c-email" autocomplete="email"
-                 maxlength="254"
-                 placeholder="votre@email.com" required>
-        </div>
-        <div class="field">
-          <label for="c-message">Message <span aria-hidden="true">*</span></label>
-          <textarea id="c-message" rows="5"
-                    minlength="10" maxlength="1000"
-                    placeholder="Votre message (10–1000 caractères)" required></textarea>
-          <small id="c-char-count">0 / 1000 caractères</small>
-        </div>
 
-        <!--
-          hCaptcha widget.
-          data-sitekey : remplacer par votre clé publique hCaptcha.
-          Le widget génère automatiquement un champ h-captcha-response
-          lu par sendContact() via hcaptcha.getResponse().
-        -->
-        <div class="h-captcha"
-             data-sitekey="YOUR_HCAPTCHA_SITE_KEY"
-             data-theme="light">
-        </div>
+        <form id="contact-form" method="post" autocomplete="on">
 
-        <button class="btn" id="btn-contact" onclick="sendContact()">Envoyer</button>
+          <div class="field">
+
+            <label for="c-name"> Nom<span aria-hidden="true">*</span></label>
+
+            <input type="text" id="c-name" name="name" autocomplete="name"
+              minlength="2" maxlength="50" placeholder="Votre nom" required>
+
+          </div>
+
+          <div class="field">
+
+            <label for="c-email"> Email<span aria-hidden="true">*</span></label>
+
+            <input type="email" id="c-email" name="email" autocomplete="email"
+              maxlength="254" placeholder="votre@email.com" required>
+
+          </div>
+
+          <div class="field">
+
+            <label for="c-message"> Message<span aria-hidden="true">*</span></label>
+
+            <textarea id="c-message" name="message" rows="5" minlength="10"
+              maxlength="1000" placeholder="Votre message (10–1000 caractères)"
+              required></textarea>
+
+            <small id="c-char-count">
+              0 / 1000 caractères
+            </small>
+
+          </div>
+
+          <button class="btn" id="btn-contact" type="submit"> Envoyer </button>
+
+        </form>
+
         <p class="msg" id="contact-msg" role="alert" aria-live="polite"></p>
+
       </section>
+
     </div>
   </main>
 
   <!-- Bandeau cookie -->
+
   <div id="cookie-banner">
     <div id="cookie-text">
       <strong>🍪 Cookies</strong>
-      Ce site utilise un cookie technique (<code>auth_token</code>)
-      strictement nécessaire à l'authentification. Aucun cookie publicitaire.
+
+      Ce site utilise un cookie technique
+      (<code>auth_token</code>)
+      strictement nécessaire à l'authentification.
+      Aucun cookie publicitaire.
     </div>
+
     <div id="cookie-buttons">
-      <button id="cookie-accept">Accepter</button>
-      <button id="cookie-refuse">Refuser</button>
+      <button id="cookie-accept" type="button"> Accepter </button>
+      <button id="cookie-refuse" type="button"> Refuser </button>
     </div>
   </div>
 
-  <button id="cookie-settings" class="cookie-settings-btn">⚙️ Modifier mes cookies</button>
-  <button id="btn-logout" class="btn btn-logout" style="display:none;">Se déconnecter</button>
+  <button id="cookie-settings" class="cookie-settings-btn" type="button">
+    ⚙️ Modifier mes cookies
+  </button>
+
+  <button id="btn-logout" class="btn btn-logout" type="button"
+    style="display:none;"> Se déconnecter
+  </button>
+
+  
+  <input type="text" name="website" id="website" style="display:none !important;" 
+  tabindex="-1" autocomplete="off">
+  
+  
+  <script>
+    if (sessionStorage.getItem("gate_passed") !== "1") {
+      window.location.replace("gate.html");
+    }
+  </script>
 
   <script src="app.js"></script>
+
 </body>
 </html>

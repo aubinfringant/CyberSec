@@ -1,22 +1,18 @@
 <?php
 session_set_cookie_params([
-    'lifetime' => 0,
+    'lifetime' => 0,      // Cookie supprimé à la fermeture du navigateur
     'path' => '/',
-    'secure' => true,
-    'httponly' => true,
-    'samesite' => 'Strict'
+    'secure' => true,     // Envoyé uniquement en HTTPS
+    'httponly' => true,   // Le navigateur cache le cookies de connexion et aucun script ne peut le lire
+    'samesite' => 'Strict' // Jamais envoyé depuis un autre site (protection CSRF)
 ]);
 
-session_start();
+session_start(); // Démarre ou reprend la session PHP
 
-// ─── En-têtes CORS ───────────────────────────────────────────────
-// Doit être envoyé AVANT tout autre code, y compris le preflight OPTIONS.
-// Avec credentials:include, l'origine doit être exacte (pas de wildcard *).
-// Vary: Origin est requis quand l'origine est dynamique pour éviter
-// qu'un proxy cache la réponse d'une origine pour une autre.
 $allowedOrigins = ['http://localhost:8000', 'http://localhost:8001'];
 $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
-if (in_array($origin, $allowedOrigins, true)) {
+
+if (in_array($origin, $allowedOrigins, true)) { // Contrôle des origines autorisées
     header("Access-Control-Allow-Origin: $origin");
     header('Vary: Origin');
 }
@@ -35,10 +31,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 // ─── En-têtes de sécurité ─────────────────────────────────────────
-header('Content-Type: application/json; charset=utf-8');
-header('X-Content-Type-Options: nosniff');
-header('X-Frame-Options: DENY');
-header('X-XSS-Protection: 1; mode=block');
+header('Content-Type: application/json; charset=utf-8'); // Format de réponse
+header('X-Content-Type-Options: nosniff');  // Empêche le navigateur de "deviner" le type de fichier
+header('X-Frame-Options: DENY');            // Interdit d'afficher la page dans une iframe
+header('X-XSS-Protection: 1; mode=block'); // Filtre XSS intégré des anciens navigateurs
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
@@ -57,8 +53,8 @@ function checkRateLimit(PDO $pdo): bool {
 
     if ($data) {
         $elapsed = time() - strtotime($data['last_try']);
-        if ($elapsed < 60 && $data['attempts'] >= 5) return false;
-        if ($elapsed >= 60) {
+        if ($elapsed < 10 && $data['attempts'] >= 5) return false;
+        if ($elapsed >= 10) {
             $pdo->prepare("UPDATE rate_limit SET attempts=1, last_try=CURRENT_TIMESTAMP WHERE ip=?")
                 ->execute([$ip]);
         } else {
@@ -77,15 +73,22 @@ function checkRateLimit(PDO $pdo): bool {
 // la signature garantit l'intégrité sans base de données.
 function generateToken(int $userId, string $username): string {
     $secret  = getenv('JWT_SECRET') ?: 'CHANGE_ME_32_CHARS_MINIMUM_SECRET';
+
+    // Partie 1 : Header — identifie l'algorithme utilisé
     $header  = rtrim(strtr(base64_encode(json_encode(['alg'=>'HS256','typ'=>'JWT'])), '+/', '-_'), '=');
+
+    // Partie 2 : Payload — contient les données de l'utilisateur
     $payload = rtrim(strtr(base64_encode(json_encode([
-        'sub' => $userId,
-        'usr' => $username,
-        'iat' => time(),
-        'exp' => time() + 3600
+        'sub' => $userId,    // ID de l'utilisateur
+        'usr' => $username,  // Pseudo
+        'iat' => time(),     // Date de création (issued at)
+        'exp' => time() + 10 // Expire dans 1h
     ])), '+/', '-_'), '=');
+
+    // Partie 3 : Signature — garantit que personne n'a modifié le token
     $sig = rtrim(strtr(base64_encode(hash_hmac('sha256', "$header.$payload", $secret, true)), '+/', '-_'), '=');
-    return "$header.$payload.$sig";
+
+    return "$header.$payload.$sig"; // Format final : xxx.yyy.zzz
 }
 
 $path = __DIR__ . '/../database/users.db';
@@ -137,19 +140,20 @@ elseif ($action === 'login') {
     $stmt->execute([$username]);
     $user = $stmt->fetch();
 
-    // Délai constant → protection contre le timing attack
-    $dummy = '$2y$12$invalidsaltinvalidsaltinvalids.';
-    if (!$user) { password_verify($password, $dummy); }
+// Protection timing attack : même si l'utilisateur n'existe pas,
+// on exécute quand même un hash pour que le temps de réponse soit identique
+$dummy = '$2y$12$invalidsaltinvalidsaltinvalids.';
+if (!$user) { password_verify($password, $dummy); }
 
-    if (!$user || !password_verify($password, $user['password'])) {
-        http_response_code(401);
-        exit(json_encode(['error' => 'Identifiants incorrects']));
-    }
+if (!$user || !password_verify($password, $user['password'])) {
+    http_response_code(401);
+    exit(json_encode(['error' => 'Identifiants incorrects']));
+}
 
     $token = generateToken($user['id'], $username);
 
     setcookie('auth_token', $token, [
-        'expires'  => time() + 3600,
+        'expires'  => time() + 10,
         'path'     => '/',
         'httponly' => true,
         'samesite' => 'Strict',
@@ -164,6 +168,7 @@ elseif ($action === 'login') {
 
 // ─── DÉCONNEXION ──────────────────────────────────────────────────
 elseif ($action === 'logout') {
+    // Optionnel mais recommandé : valider le token CSRF ici aussi
     setcookie('auth_token', '', [
         'expires'  => time() - 3600,
         'path'     => '/',
@@ -171,13 +176,24 @@ elseif ($action === 'logout') {
         'secure'   => true,
         'samesite' => 'Strict'
     ]);
+    $_SESSION = [];
     session_destroy();
     echo json_encode(['success' => 'Déconnecté']);
 }
 
 // ─── ÉTAT DE CONNEXION ────────────────────────────────────────────
 elseif ($action === 'me') {
-    echo json_encode(['logged' => isset($_COOKIE['auth_token'])]);
+    $isValid = false;
+    if (isset($_COOKIE['auth_token'])) {
+        $parts = explode('.', $_COOKIE['auth_token']);
+        if (count($parts) === 3) {
+            $payload = json_decode(base64_decode(strtr($parts[1], '-_', '+/')), true);
+            if (isset($payload['exp']) && $payload['exp'] > time()) {
+                $isValid = true;
+            }
+        }
+    }
+    echo json_encode(['logged' => $isValid]);
 }
 
 // ─── FORMULAIRE CONTACT ───────────────────────────────────────────
@@ -185,13 +201,11 @@ elseif ($action === 'me') {
 // (comparaison en temps constant pour éviter les timing attacks).
 // Après validation, le token est régénéré pour invalider tout rejeu.
 // Protection XSS : htmlspecialchars() neutralise <, >, ", ', & avant stockage.
-// Anti-spam : vérification hCaptcha côté serveur via l'API de validation.
 elseif ($action === 'message') {
     $name        = trim($body['name']    ?? '');
     $email       = trim($body['email']   ?? '');
     $message     = trim($body['message'] ?? '');
     $csrfToken   = $body['csrf_token']   ?? '';
-    $captchaResp = $body['h-captcha-response'] ?? '';
 
     // ── 1. Vérification CSRF ──────────────────────────────────────
     if (!$csrfToken || !hash_equals($_SESSION['csrf_token'] ?? '', $csrfToken)) {
@@ -201,25 +215,7 @@ elseif ($action === 'message') {
     // Rotation du token après usage → empêche le rejeu
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 
-    // ── 2. Vérification hCaptcha ──────────────────────────────────
-    $hcaptchaSecret = getenv('HCAPTCHA_SECRET') ?: 'YOUR_HCAPTCHA_SECRET_KEY';
-    if (empty($captchaResp)) {
-        exit(json_encode(['error' => 'Captcha manquant. Veuillez cocher la case.']));
-    }
-    $verify = file_get_contents('https://hcaptcha.com/siteverify', false, stream_context_create([
-        'http' => [
-            'method'  => 'POST',
-            'header'  => 'Content-Type: application/x-www-form-urlencoded',
-            'content' => http_build_query(['secret' => $hcaptchaSecret, 'response' => $captchaResp]),
-        ]
-    ]));
-    $captchaData = json_decode($verify, true);
-    if (!($captchaData['success'] ?? false)) {
-        http_response_code(400);
-        exit(json_encode(['error' => 'Captcha invalide. Réessayez.']));
-    }
-
-    // ── 3. Validation des champs ──────────────────────────────────
+    // ── 2. Validation des champs ──────────────────────────────────
     if (strlen($name) < 2 || strlen($name) > 50)
         exit(json_encode(['error' => 'Nom invalide (2–50 caractères).']));
 
@@ -229,7 +225,7 @@ elseif ($action === 'message') {
     if (strlen($message) < 10 || strlen($message) > 1000)
         exit(json_encode(['error' => 'Message invalide (10–1000 caractères).']));
 
-    // ── 4. Neutralisation XSS avant stockage ─────────────────────
+    // ── 3. Neutralisation XSS avant stockage ─────────────────────
     // htmlspecialchars() convertit <, >, ", ', & en entités HTML.
     // Les données ne peuvent donc pas être interprétées comme du code
     // si elles sont réaffichées dans un contexte HTML.
@@ -237,7 +233,7 @@ elseif ($action === 'message') {
     $messageSafe = htmlspecialchars($message, ENT_QUOTES | ENT_HTML5, 'UTF-8');
     // L'email n'est pas affiché en HTML, on le stocke tel quel après validation
 
-    // ── 5. Stockage en base (requête préparée → anti-SQLi) ────────
+    // ── 4. Stockage en base (requête préparée → anti-SQLi) ────────
     $stmt = $pdo->prepare("INSERT INTO contact (name, email, message) VALUES (?, ?, ?)");
     $stmt->execute([$nameSafe, $email, $messageSafe]);
 

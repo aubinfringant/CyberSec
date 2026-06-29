@@ -24,7 +24,7 @@ header('Cache-Control: no-store'); // Ne pas mettre en cache un token de sécuri
 
 // Génère un token si absent (première visite) ou si la session est nouvelle
 if (empty($_SESSION['csrf_token'])) {
-    $_SESSION['csrf_token'] = bin2hex(random_bytes(32)); // 256 bits d'entropie
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
 
 echo json_encode(['csrf_token' => $_SESSION['csrf_token']]);

@@ -81,7 +81,19 @@ async function callAPI(action, data, msgEl, btnEl) {
       msgEl.textContent = typeof json.success === 'string'
         ? json.success
         : `Bienvenue, ${json.username} !`;
-      if (action === 'login') checkAuth();
+
+      if (action === 'login') {
+        document.getElementById('login-form').reset();
+        checkAuth();
+      }
+
+      if (action === 'register') {
+        document.getElementById('register-form').reset();
+
+        fill.style.width = '0';
+        label.textContent =
+          'Minimum 12 caractères avec une majuscule, une minuscule, un chiffre et un caractère spécial';
+      }
     } else {
       msgEl.className = 'msg error';
       msgEl.textContent = json.error ?? 'Erreur inconnue';
@@ -113,11 +125,18 @@ async function checkAuth() {
 // ─── Formulaire de contact sécurisé ──────────────────────────────
 // Processus :
 //   1. Récupération du token CSRF depuis la session serveur (/csrf.php)
-//   2. Lecture de la réponse hCaptcha (hcaptcha.getResponse())
-//   3. Validation côté client (longueurs, format email)
-//   4. Envoi JSON → auth.php (action: 'message')
-//   5. Réinitialisation du widget hCaptcha après soumission
+//   2. Validation côté client (longueurs, format email)
+//   3. Envoi JSON → auth.php (action: 'message')
 async function sendContact() {
+  const form = document.getElementById("contact-form");
+  
+  // ── Validation côté client ────────────────────────────────────
+  
+  if (!form.checkValidity()) {
+    form.reportValidity();
+    return;
+  }
+  
   const msgEl = document.getElementById('contact-msg');
   const btnEl = document.getElementById('btn-contact');
 
@@ -125,37 +144,19 @@ async function sendContact() {
   const email   = document.getElementById('c-email').value.trim();
   const message = document.getElementById('c-message').value.trim();
 
-  // ── Validation côté client ────────────────────────────────────
-  if (name.length < 2 || name.length > 50) {
-    msgEl.className = 'msg error';
-    msgEl.textContent = 'Nom invalide (2–50 caractères).';
-    return;
-  }
-  // Regex email simple côté client (le serveur valide avec filter_var)
+  
+  // Regex email simple côté client
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) {
     msgEl.className = 'msg error';
     msgEl.textContent = 'Adresse email invalide.';
     return;
   }
-  if (message.length < 10 || message.length > 1000) {
-    msgEl.className = 'msg error';
-    msgEl.textContent = 'Message invalide (10–1000 caractères).';
-    return;
-  }
-
-  // ── Récupération de la réponse hCaptcha ───────────────────────
-  // hcaptcha.getResponse() retourne '' si l'utilisateur n'a pas coché
-  const captchaResponse = typeof hcaptcha !== 'undefined' ? hcaptcha.getResponse() : '';
-  if (!captchaResponse) {
-    msgEl.className = 'msg error';
-    msgEl.textContent = 'Veuillez compléter le captcha.';
-    return;
-  }
 
   // ── Récupération du token CSRF ────────────────────────────────
   // Le token est lié à la session PHP ; il est régénéré côté serveur
-  // après chaque soumission valide pour empêcher le rejeu de requêtes.
+  // après chaque soumission valide pour empêcher la répétition de requêtes.
   let csrfToken = '';
+
   try {
     const csrfRes  = await fetch(`${API}/csrf.php`, { credentials: 'include' });
     const csrfData = await csrfRes.json();
@@ -181,8 +182,7 @@ async function sendContact() {
         name,
         email,
         message,
-        csrf_token: csrfToken,
-        'h-captcha-response': captchaResponse,
+        csrf_token: csrfToken
       }),
     });
     const json = await res.json();
@@ -190,16 +190,9 @@ async function sendContact() {
     if (json.success) {
       msgEl.className   = 'msg success';
       msgEl.textContent = json.success;
-      // Réinitialise le formulaire et le widget captcha
-      document.getElementById('c-name').value    = '';
-      document.getElementById('c-email').value   = '';
-      document.getElementById('c-message').value = '';
+      
+      document.getElementById('contact-form').reset();
       charCountEl.textContent = '0 / 1000 caractères';
-      if (typeof hcaptcha !== 'undefined') hcaptcha.reset();
-    } else {
-      msgEl.className   = 'msg error';
-      msgEl.textContent = json.error ?? 'Erreur inconnue.';
-      if (typeof hcaptcha !== 'undefined') hcaptcha.reset();
     }
   } catch {
     msgEl.className   = 'msg error';
@@ -209,45 +202,65 @@ async function sendContact() {
   }
 }
 
-// ─── Connexion ───────────────────────────────────────────────────
-document.getElementById('btn-login').addEventListener('click', () => {
-  const username = document.getElementById('login-user').value.trim();
-  const password = document.getElementById('login-pass').value;
-  const msg = document.getElementById('login-msg');
-  const btn = document.getElementById('btn-login');
+document.getElementById('contact-form').addEventListener('submit', (e) => {
+  e.preventDefault();
 
-  if (!username || !password) {
-    msg.className   = 'msg error';
-    msg.textContent = 'Veuillez remplir tous les champs.';
+  const form = e.target;
+
+  if (!form.checkValidity()) {
+    form.reportValidity();
     return;
   }
-  callAPI('login', { username, password }, msg, btn);
+
+  sendContact();
+});
+
+// ─── Connexion ───────────────────────────────────────────────────
+document.getElementById('login-form').addEventListener('submit', (e) => {
+  e.preventDefault();
+
+  const form = e.target;
+
+  if (!form.checkValidity()) {
+    form.reportValidity();
+    return;
+  }
+
+  const username = document.getElementById('login-user').value.trim();
+  const password = document.getElementById('login-pass').value;
+
+  callAPI('login',{ username, password },
+    document.getElementById('login-msg'),
+    document.getElementById('btn-login')
+  );
 });
 
 // ─── Inscription ─────────────────────────────────────────────────
-document.getElementById('btn-register').addEventListener('click', () => {
+document.getElementById('register-form').addEventListener('submit', (e) => {
+  e.preventDefault();
+
+  const form = e.target;
+
+  if (!form.checkValidity()) {
+    form.reportValidity();
+    return;
+  }
+
   const username = document.getElementById('reg-user').value.trim();
   const password = document.getElementById('reg-pass').value;
   const confirm  = document.getElementById('reg-pass2').value;
-  const msg = document.getElementById('reg-msg');
-  const btn = document.getElementById('btn-register');
 
-  if (!username || !password || !confirm) {
-    msg.className   = 'msg error';
-    msg.textContent = 'Veuillez remplir tous les champs.';
-    return;
-  }
+  const msg = document.getElementById('reg-msg');
+
   if (password !== confirm) {
-    msg.className   = 'msg error';
+    msg.className = 'msg error';
     msg.textContent = 'Les mots de passe ne correspondent pas.';
     return;
   }
-  if (password.length < 12) {
-    msg.className   = 'msg error';
-    msg.textContent = 'Mot de passe trop court (12 min).';
-    return;
-  }
-  callAPI('register', { username, password }, msg, btn);
+
+  callAPI('register',{ username, password },
+    msg,document.getElementById('btn-register')
+  );
 });
 
 // ─── Bandeau cookie ───────────────────────────────────────────────
