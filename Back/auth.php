@@ -58,7 +58,8 @@ function checkRateLimit(PDO $pdo): bool {
                 ->execute([$ip]);
         }
     } else {
-        $pdo->prepare("INSERT INTO rate_limit (ip) VALUES (?)")->execute([$ip]);
+        $pdo->prepare("INSERT INTO rate_limit (ip) VALUES (?)")
+            ->execute([$ip]);
     }
     return true;
 }

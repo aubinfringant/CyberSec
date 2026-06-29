@@ -24,10 +24,11 @@ const label = document.getElementById('strength-label');
 document.getElementById('reg-pass').addEventListener('input', e => {
   const val = e.target.value;
   let score = 0;
-  if (val.length >= 12) score++;
+  if (/[a-z]/.test(val)) score++;
   if (/[A-Z]/.test(val)) score++;
   if (/[0-9]/.test(val)) score++;
   if (/[^A-Za-z0-9]/.test(val)) score++;
+  if (val.length < 12) score--;
 
   const levels = [
     { w: '25%', bg: '#ef4444', text: 'Très faible' },
@@ -38,7 +39,7 @@ document.getElementById('reg-pass').addEventListener('input', e => {
   const lvl = levels[Math.min(score - 1, 4)] ?? levels[0];
   fill.style.width = val ? lvl.w : '0';
   fill.style.background = lvl.bg;
-  label.textContent = val ? lvl.text : 'Minimum 12 caractères avec une majuscule, une minuscule,un chiffre et un caractère spécial';
+  label.textContent = val ? lvl.text : 'Minimum 12 caractères avec majuscules, minuscules, chiffres et caractères spéciaux';
 });
 
 // ─── Appel API générique ─────────────────────────────────────────
@@ -48,6 +49,7 @@ async function callAPI(action, data, msgEl, btnEl) {
   msgEl.textContent = 'Chargement…';
 
   try {
+    // Envoi de la requête de connexion
     const res = await fetch('http://localhost:8001/auth.php', {
         method: 'POST',
         credentials: 'include',
@@ -119,7 +121,7 @@ document.getElementById('btn-login').addEventListener('click', () => {
   const msg = document.getElementById('login-msg');
   const btn = document.getElementById('btn-login');
 
-  // Validation côté client (jamais suffisante seule !)
+  // Validation côté client
   if (!username || !password) {
     msg.className = 'msg error';
     msg.textContent = 'Veuillez remplir tous les champs.';

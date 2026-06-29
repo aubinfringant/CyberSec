@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="fr">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Authentification sécurisée</title>
   <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
   <main>
     <div class="card" id="app">
@@ -20,11 +22,13 @@
       <!-- Formulaire connexion -->
       <section id="login" class="panel active" aria-label="Connexion">
         <h1>Connexion</h1>
+
         <div class="field">
           <label for="login-user">Pseudo</label>
           <input type="text" id="login-user" autocomplete="username"
                  minlength="3" maxlength="30" required>
         </div>
+
         <div class="field">
           <label for="login-pass">Mot de passe</label>
           <div class="input-wrap">
@@ -33,6 +37,7 @@
             <button type="button" class="toggle-pass" aria-label="Afficher/masquer">👁</button>
           </div>
         </div>
+        
         <button class="btn" id="btn-login">Se connecter</button>
         <p class="msg" id="login-msg" role="alert" aria-live="polite"></p>
       </section>
