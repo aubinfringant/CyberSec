@@ -124,19 +124,20 @@ async function checkAuth() {
 
 // ─── Formulaire de contact sécurisé ──────────────────────────────
 // Processus :
-//   1. Récupération du token CSRF depuis la session serveur (/csrf.php)
-//   2. Validation côté client (longueurs, format email)
-//   3. Envoi JSON → auth.php (action: 'message')
+//   1. Validation côté client (longueurs, format email)
+//   2. Validation du Captcha
+//   3. Récupération du token CSRF depuis la session serveur (/csrf.php)
+//   4. Envoi JSON → auth.php (action: 'message')
+
 async function sendContact() {
   const form = document.getElementById("contact-form");
   
-  // ── Validation côté client ────────────────────────────────────
-  
+  // longueur
   if (!form.checkValidity()) {
     form.reportValidity();
     return;
   }
-  
+
   const msgEl = document.getElementById('contact-msg');
   const btnEl = document.getElementById('btn-contact');
 
@@ -144,19 +145,29 @@ async function sendContact() {
   const email   = document.getElementById('c-email').value.trim();
   const message = document.getElementById('c-message').value.trim();
 
-  
-  // Regex email simple côté client
+  // format email
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) {
     msgEl.className = 'msg error';
     msgEl.textContent = 'Adresse email invalide.';
     return;
   }
+  
+  
+  
+  // ── Validation du Captcha ─────────────────────────────────────
+  const captchaInput = document.getElementById('c-captcha-answer');
+  const givenAnswer = parseInt(captchaInput.value, 10);
+
+  if (isNaN(givenAnswer) || givenAnswer !== contactCorrectAnswer) {
+    msgEl.className = 'msg error';
+    msgEl.textContent = 'Calcul incorrect. Veuillez réessayer.';
+    captchaInput.value = '';
+    captchaInput.focus();
+    return;
+  }
 
   // ── Récupération du token CSRF ────────────────────────────────
-  // Le token est lié à la session PHP ; il est régénéré côté serveur
-  // après chaque soumission valide pour empêcher la répétition de requêtes.
   let csrfToken = '';
-
   try {
     const csrfRes  = await fetch(`${API}/csrf.php`, { credentials: 'include' });
     const csrfData = await csrfRes.json();
@@ -193,6 +204,9 @@ async function sendContact() {
       
       document.getElementById('contact-form').reset();
       charCountEl.textContent = '0 / 1000 caractères';
+      
+      // On regénère un nouveau captcha pour le prochain envoi éventuel
+      generateContactCaptcha();
     }
   } catch {
     msgEl.className   = 'msg error';
@@ -203,7 +217,7 @@ async function sendContact() {
 }
 
 document.getElementById('contact-form').addEventListener('submit', (e) => {
-  e.preventDefault();
+  e.preventDefault(); // on utilise pas directement le post du form mais on récupère les données des champs
 
   const form = e.target;
 
@@ -336,3 +350,29 @@ document.getElementById('btn-logout').addEventListener('click', async () => {
     disableAuth();
   }
 })();
+
+// ─── Variable globale pour le Captcha de Contact ─────────────────
+let contactCorrectAnswer;
+
+function generateContactCaptcha() {
+  const n1 = Math.floor(Math.random() * 9) + 1;
+  const n2 = Math.floor(Math.random() * 9) + 1;
+  contactCorrectAnswer = n1 + n2;
+  const questionEl = document.getElementById('c-captcha-question');
+  if (questionEl) {
+    questionEl.textContent = `${n1} + ${n2} = ?`;
+  }
+  const answerInput = document.getElementById('c-captcha-answer');
+  if (answerInput) {
+    answerInput.value = '';
+  }
+}
+
+// Lancer la génération dès que le DOM est prêt s'il s'agit de la bonne section
+document.addEventListener('DOMContentLoaded', () => {
+  generateContactCaptcha();
+  const refreshBtn = document.getElementById('btn-c-refresh');
+  if (refreshBtn) {
+    refreshBtn.addEventListener('click', generateContactCaptcha);
+  }
+});

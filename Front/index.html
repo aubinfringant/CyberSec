@@ -170,6 +170,18 @@
 
           </div>
 
+          <!-- Bloc Captcha Mathématique -->
+          <div class="field" style="margin-top: 16px;">
+            <label for="c-captcha-answer">
+              Sécurité : <span id="c-captcha-question" style="color: #4f46e5; font-weight: bold;">...</span>
+              <span aria-hidden="true">*</span>
+            </label>
+            <div style="display: flex; gap: 10px; align-items: center;">
+              <input type="number" id="c-captcha-answer" placeholder="Votre réponse" required style="max-width: 150px; text-align: center;">
+              <button type="button" id="btn-c-refresh" style="background: none; border: none; cursor: pointer; font-size: 18px;" title="Changer de calcul">🔄</button>
+            </div>
+          </div>
+
           <button class="btn" id="btn-contact" type="submit"> Envoyer </button>
 
         </form>

@@ -53,8 +53,8 @@ function checkRateLimit(PDO $pdo): bool {
 
     if ($data) {
         $elapsed = time() - strtotime($data['last_try']);
-        if ($elapsed < 10 && $data['attempts'] >= 5) return false;
-        if ($elapsed >= 10) {
+        if ($elapsed < 60 && $data['attempts'] >= 5) return false;
+        if ($elapsed >= 60) {
             $pdo->prepare("UPDATE rate_limit SET attempts=1, last_try=CURRENT_TIMESTAMP WHERE ip=?")
                 ->execute([$ip]);
         } else {
@@ -82,7 +82,7 @@ function generateToken(int $userId, string $username): string {
         'sub' => $userId,    // ID de l'utilisateur
         'usr' => $username,  // Pseudo
         'iat' => time(),     // Date de création (issued at)
-        'exp' => time() + 10 // Expire dans 1h
+        'exp' => time() + 3600 // Expire dans 1h
     ])), '+/', '-_'), '=');
 
     // Partie 3 : Signature — garantit que personne n'a modifié le token
@@ -153,7 +153,7 @@ if (!$user || !password_verify($password, $user['password'])) {
     $token = generateToken($user['id'], $username);
 
     setcookie('auth_token', $token, [
-        'expires'  => time() + 10,
+        'expires'  => time() + 3600,
         'path'     => '/',
         'httponly' => true,
         'samesite' => 'Strict',

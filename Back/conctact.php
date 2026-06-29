@@ -46,7 +46,7 @@ if (strlen($message) < 10 || strlen($message) > 1000) {
 $name = htmlspecialchars($name, ENT_QUOTES, 'UTF-8');
 $message = htmlspecialchars($message, ENT_QUOTES, 'UTF-8');
 
-// exemple stockage DB
+// stockage DB
 $stmt = $pdo->prepare("INSERT INTO contact (name, email, message) VALUES (?, ?, ?)");
 $stmt->execute([$name, $email, $message]);
 
